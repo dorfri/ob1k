@@ -2,7 +2,7 @@ package com.outbrain.ob1k.http;
 
 import com.outbrain.ob1k.http.marshalling.JacksonMarshallingStrategy;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
-import com.outbrain.ob1k.http.ning.NingRequestBuilder;
+import com.outbrain.ob1k.http.providers.ning.NingRequestBuilder;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
