@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.concurrent.lazy;
 
-import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
@@ -22,14 +21,13 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 /**
  * a future that contains a producer. each time the future is consumed the producer is activated
@@ -137,12 +135,12 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
   }
 
   @Override
-  public <R> ComposableFuture<R> map(final Function<T, R> handler) {
+  public <R> ComposableFuture<R> map(Function<? super T, ? extends R> mapper) {
     final LazyComposableFuture<T> outer = this;
     return new LazyComposableFuture<>(consumer -> outer.consume(result -> {
       if (result.isSuccess()) {
         try {
-          consumer.consume(Try.fromValue(handler.apply(result.getValue())));
+          consumer.consume(Try.fromValue(mapper.apply(result.getValue())));
         } catch (final UncheckedExecutionException e) {
           final Throwable error = e.getCause() != null ? e.getCause() : e;
           consumer.consume(Try.fromError(error));
@@ -156,14 +154,14 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
   }
 
   @Override
-  public <R> ComposableFuture<R> flatMap(final Function<T, ComposableFuture<R>> handler) {
+  public <R> ComposableFuture<R> flatMap(final Function<? super T, ? extends ComposableFuture<R>> mapper) {
     final LazyComposableFuture<T> outer = this;
     return new LazyComposableFuture<>(consumer -> outer.consume(result -> {
       if (result.isSuccess()) {
         try {
-          final ComposableFuture<R> next = handler.apply(result.getValue());
+          final ComposableFuture<R> next = mapper.apply(result.getValue());
           if (next == null) {
-            consumer.consume(Try.fromNull());
+            consumer.consume(Try.fromValue(null));
           } else {
             next.consume(consumer);
           }
@@ -177,14 +175,14 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
   }
 
   @Override
-  public ComposableFuture<T> recover(final Function<Throwable, T> handler) {
+  public ComposableFuture<T> recover(final Function<Throwable, ? extends T> recover) {
     final LazyComposableFuture<T> outer = this;
     return new LazyComposableFuture<>(consumer -> outer.consume(result -> {
       if (result.isSuccess()) {
         consumer.consume(result);
       } else {
         try {
-          consumer.consume(Try.fromValue(handler.apply(result.getError())));
+          consumer.consume(Try.fromValue(recover.apply(result.getError())));
         } catch (final UncheckedExecutionException e) {
           consumer.consume(Try.fromError(e.getCause() != null ? e.getCause() : e));
         } catch (final Exception e) {
@@ -195,16 +193,16 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
   }
 
   @Override
-  public ComposableFuture<T> recoverWith(final Function<Throwable, ComposableFuture<T>> handler) {
+  public ComposableFuture<T> recoverWith(final Function<Throwable, ? extends ComposableFuture<T>> recover) {
     final LazyComposableFuture<T> outer = this;
     return new LazyComposableFuture<>(consumer -> outer.consume(result -> {
       if (result.isSuccess()) {
         consumer.consume(result);
       } else {
         try {
-          final ComposableFuture<T> next = handler.apply(result.getError());
+          final ComposableFuture<T> next = recover.apply(result.getError());
           if (next == null) {
-            consumer.consume(Try.fromNull());
+            consumer.consume(Try.fromValue(null));
           } else {
             next.consume(consumer);
           }
@@ -216,7 +214,7 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
   }
 
   @Override
-  public <R> ComposableFuture<R> always(final Function<Try<T>, R> handler) {
+  public <R> ComposableFuture<R> always(final Function<Try<T>, ? extends R> handler) {
     final LazyComposableFuture<T> outer = this;
     return new LazyComposableFuture<>(consumer -> outer.consume(result -> {
       try {
@@ -231,13 +229,13 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
   }
 
   @Override
-  public <R> ComposableFuture<R> alwaysWith(final Function<Try<T>, ComposableFuture<R>> handler) {
+  public <R> ComposableFuture<R> alwaysWith(final Function<Try<T>, ? extends ComposableFuture<R>> handler) {
     final LazyComposableFuture<T> outer = this;
     return new LazyComposableFuture<>(consumer -> outer.consume(result -> {
       try {
         final ComposableFuture<R> next = handler.apply(result);
         if (next == null) {
-          consumer.consume(Try.fromNull());
+          consumer.consume(Try.fromValue(null));
         } else {
           next.consume(consumer);
         }
@@ -266,18 +264,9 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
     }
   }
 
-  public void consumeSync(final Consumer<T> consumer) throws InterruptedException {
-    final CountDownLatch latch = new CountDownLatch(1);
-    this.consume(result -> {
-      consumer.consume(result);
-      latch.countDown();
-    });
-
-    latch.await();
-  }
-
   @Override
-  public LazyComposableFuture<T> withTimeout(final Scheduler scheduler, final long timeout, final TimeUnit unit, final String taskDescription) {
+  public LazyComposableFuture<T> withTimeout(final Scheduler scheduler, final long timeout, final TimeUnit unit,
+                                             final String taskDescription) {
     final LazyComposableFuture<T> deadline = new LazyComposableFuture<>(consumer -> scheduler.schedule(() ->
       consumer.consume(Try.fromError(new TimeoutException("Timeout occurred on task ('" + taskDescription + "' " + timeout + " " + unit + ")"))), timeout, unit));
     return collectFirst(Arrays.asList(this, deadline));
@@ -384,7 +373,7 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
   }
 
   @Override
-  public <R> ComposableFuture<R> transform(final Function<? super T, ? extends R> function) {
+  public <R> ComposableFuture<R> transform(final com.google.common.base.Function<? super T, ? extends R> function) {
     return continueOnSuccess(new SuccessHandler<T, R>() {
       @Override
       public R handle(final T result) {
