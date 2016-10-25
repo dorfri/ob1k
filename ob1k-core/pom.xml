@@ -23,6 +23,11 @@
     </dependency>
 
     <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>ob1k-concurrent-scala</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
       <version>5.0.3</version>

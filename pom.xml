@@ -64,6 +64,7 @@
     <module>ob1k-http</module>
     <module>ob1k-swagger</module>
     <module>ob1k-spring</module>
+    <module>ob1k-concurrent-scala</module>
   </modules>
 
   <properties>
@@ -199,6 +200,12 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>ob1k-concurrent</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>ob1k-concurrent-scala</artifactId>
         <version>${project.version}</version>
       </dependency>
 
