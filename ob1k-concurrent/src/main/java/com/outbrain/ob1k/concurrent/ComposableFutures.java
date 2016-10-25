@@ -168,19 +168,19 @@ public class ComposableFutures {
    * @return a future containing a list of all the results produced by the producer.
    */
   public static <T, R> ComposableFuture<List<R>> batch(final List<T> elements, final int batchSize,
-                                                       final FutureSuccessHandler<T, R> producer) {
+                                                       final java.util.function.Function<T, ComposableFuture<R>> producer) {
     return batch(elements, 0, batchSize, producer);
   }
 
   private static <T, R> ComposableFuture<List<R>> batch(final List<T> elements, final int index, final int batchSize,
-                                                        final FutureSuccessHandler<T, R> producer) {
+                                                        final java.util.function.Function<T, ComposableFuture<R>> producer) {
     if (index >= elements.size()) {
       return ComposableFutures.fromValue(Collections.<R>emptyList());
     }
 
     final List<ComposableFuture<R>> singleBatch = new ArrayList<>(batchSize);
     for (int i = index; i < index + batchSize && i < elements.size(); i++) {
-      singleBatch.add(producer.handle(elements.get(i)));
+      singleBatch.add(producer.apply(elements.get(i)));
     }
 
     final ComposableFuture<List<R>> batchRes = all(true, singleBatch);
@@ -212,7 +212,7 @@ public class ComposableFutures {
    * @return a future containing a list of all the results produced by the producer.
    */
   public static <T, R> ComposableFuture<List<R>> batchUnordered(final List<T> elements, final int batchSize,
-                                                                final FutureSuccessHandler<T, R> producer) {
+                                                                final java.util.function.Function<T, ComposableFuture<R>> producer) {
 
     final AtomicInteger index = new AtomicInteger(0);
     final List<ComposableFuture<List<R>>> futures = new ArrayList<>(batchSize);
@@ -231,12 +231,12 @@ public class ComposableFutures {
   }
 
   private static <T, R> ComposableFuture<List<R>> seqUnordered(final List<T> elements, final AtomicInteger index,
-                                                               final FutureSuccessHandler<T, R> producer) {
+                                                               final java.util.function.Function<T, ComposableFuture<R>> producer) {
     final int currentIndex = index.getAndIncrement();
     if (currentIndex >= elements.size()) {
       return ComposableFutures.fromValue(Collections.<R>emptyList());
     } else {
-      return producer.handle(elements.get(currentIndex)).flatMap(result -> {
+      return producer.apply(elements.get(currentIndex)).flatMap(result -> {
         final ComposableFuture<List<R>> rest = seqUnordered(elements, index, producer);
         return rest.map(restResult -> {
           final List<R> combined = new ArrayList<>(restResult.size() + 1);
@@ -262,20 +262,20 @@ public class ComposableFutures {
    * @return a stream containing the combined result of each batch
    */
   public static <T, R> Observable<List<R>> batchToStream(final List<T> elements, final int batchSize,
-                                                         final FutureSuccessHandler<T, R> producer) {
+                                                         final java.util.function.Function<T, ComposableFuture<R>> producer) {
     return Observable.create(subscriber -> batchToStream(elements, batchSize, 0, subscriber, producer));
   }
 
   private static <T, R> void batchToStream(final List<T> elements, final int batchSize, final int index,
                                            final Subscriber<? super List<R>> subscriber,
-                                           final FutureSuccessHandler<T, R> producer) {
+                                           final java.util.function.Function<T, ComposableFuture<R>> producer) {
 
     if (index >= elements.size()) {
       subscriber.onCompleted();
     } else {
       final List<ComposableFuture<R>> singleBatch = new ArrayList<>(batchSize);
       for (int i = index; i < index + batchSize && i < elements.size(); i++) {
-        singleBatch.add(producer.handle(elements.get(i)));
+        singleBatch.add(producer.apply(elements.get(i)));
       }
 
       final ComposableFuture<List<R>> batchRes = all(true, singleBatch);
