@@ -14,7 +14,7 @@ import java.util.function.Predicate;
  * @param <T> the type returned by the computation.
  * @author marenzon, aronen
  */
-public abstract class Try<T> {
+public interface Try<T> {
 
   /**
    * Creates new {@link Success} try from given value.
@@ -23,7 +23,7 @@ public abstract class Try<T> {
    * @param <T>   computation type
    * @return new {@link Success} Try
    */
-  public static <T> Try<T> fromValue(final T value) {
+  static <T> Try<T> fromValue(final T value) {
     return Success.of(value);
   }
 
@@ -34,7 +34,7 @@ public abstract class Try<T> {
    * @param <T>   computation type
    * @return new {@link Failure} Try
    */
-  public static <T> Try<T> fromError(final Throwable error) {
+  static <T> Try<T> fromError(final Throwable error) {
     return Failure.of(error);
   }
 
@@ -46,7 +46,7 @@ public abstract class Try<T> {
    * @param <T>      computation type
    * @return either {@link Success}, or {@link Failure} by supplier result
    */
-  public static <T> Try<T> apply(final CheckedSupplier<? extends T> supplier) {
+  static <T> Try<T> apply(final CheckedSupplier<? extends T> supplier) {
     try {
       return fromValue(supplier.get());
     } catch (final Exception e) {
@@ -61,7 +61,7 @@ public abstract class Try<T> {
    * @param <U>       computation type
    * @return flatten Try
    */
-  public static <U> Try<U> flatten(final Try<? extends Try<U>> nestedTry) {
+  static <U> Try<U> flatten(final Try<? extends Try<U>> nestedTry) {
     if (nestedTry.isFailure()) {
       return fromError(nestedTry.getError());
     }
@@ -71,12 +71,12 @@ public abstract class Try<T> {
   /**
    * @return true if the Try is a Success, or false in case of Failure.
    */
-  public abstract boolean isSuccess();
+  boolean isSuccess();
 
   /**
    * @return true if the Try is a Failure, or false in case of Success.
    */
-  public abstract boolean isFailure();
+  boolean isFailure();
 
   /**
    * Maps the value of T to the value of type U.
@@ -85,7 +85,7 @@ public abstract class Try<T> {
    * @param <U>      the type of the result.
    * @return result of mapped value in a Try.
    */
-  public abstract <U> Try<U> map(Function<? super T, ? extends U> function);
+  <U> Try<U> map(Function<? super T, ? extends U> function);
 
   /**
    * Maps the value of T to a new Try of U.
@@ -94,7 +94,7 @@ public abstract class Try<T> {
    * @param <U>      the type of the result.
    * @return a new Try of the mapped T value.
    */
-  public abstract <U> Try<U> flatMap(Function<? super T, ? extends Try<U>> function);
+  <U> Try<U> flatMap(Function<? super T, ? extends Try<U>> function);
 
   /**
    * Recovers a {@link Failure} Try into a {@link Success} pne
@@ -102,7 +102,7 @@ public abstract class Try<T> {
    * @param recover a function to apply the exception
    * @return a new Success
    */
-  public abstract Try<T> recover(Function<Throwable, ? extends T> recover);
+  Try<T> recover(Function<Throwable, ? extends T> recover);
 
   /**
    * Recovers a {@link Failure} Try into a new supplied Try
@@ -110,7 +110,7 @@ public abstract class Try<T> {
    * @param recover a function to apply the exception
    * @return a new Try
    */
-  public abstract Try<T> recoverWith(Function<Throwable, ? extends Try<T>> recover);
+  Try<T> recoverWith(Function<Throwable, ? extends Try<T>> recover);
 
   /**
    * Applies mapper function in case of Success, or recover function in case of Failure.
@@ -121,7 +121,7 @@ public abstract class Try<T> {
    * @param <U>     computation type
    * @return a new Try from applied functions
    */
-  public abstract <U> Try<U> transform(Function<? super T, ? extends Try<U>> mapper,
+  <U> Try<U> transform(Function<? super T, ? extends Try<U>> mapper,
                                        Function<Throwable, ? extends Try<U>> recover);
 
   /**
@@ -130,7 +130,7 @@ public abstract class Try<T> {
    *
    * @param consumer for the value of T
    */
-  public abstract void forEach(java.util.function.Consumer<? super T> consumer);
+  void forEach(java.util.function.Consumer<? super T> consumer);
 
   /**
    * Applies recover function in case of Failure or mapper function in case of Success.
@@ -141,7 +141,7 @@ public abstract class Try<T> {
    * @param <U>     computation type
    * @return the result of applied functions
    */
-  public abstract <U> Try<U> fold(Function<Throwable, ? extends U> recover,
+  <U> Try<U> fold(Function<Throwable, ? extends U> recover,
                                   Function<? super T, ? extends U> mapper);
 
   /**
@@ -151,42 +151,42 @@ public abstract class Try<T> {
    * @param predicate the predicate for the result
    * @return new future with same value if predicate returns true, else new future with a failure
    */
-  public abstract Try<T> ensure(final Predicate<? super T> predicate);
+  Try<T> ensure(final Predicate<? super T> predicate);
 
   /**
    * @return the value if computation succeed, or throws the exception of the error.
    * @throws Throwable computation error
    */
-  public abstract T get() throws Throwable;
+  T get() throws Throwable;
 
   /**
    * @return the computed value, else null.
    */
-  public abstract T getValue();
+  T getValue();
 
   /**
    * @return the error if computation failed, else null.
    */
-  public abstract Throwable getError();
+  Throwable getError();
 
   /**
    * @param defaultValue the default value to return if Try is Failure.
    * @return the value if Success, else defaultValue.
    */
-  public abstract T getOrElse(T defaultValue);
+  T getOrElse(T defaultValue);
 
   /**
    * @param defaultTry the default try to return if Try is Failure.
    * @return the try if Success, else defaultTry.
    */
-  public abstract Try<T> orElse(Try<T> defaultTry);
+  Try<T> orElse(Try<T> defaultTry);
 
   /**
    * @return {@link Optional} of the current Try
    */
-  public abstract Optional<T> toOptional();
+  Optional<T> toOptional();
 
-  final static class Success<T> extends Try<T> {
+  final class Success<T> implements Try<T> {
 
     private final T value;
 
@@ -303,7 +303,7 @@ public abstract class Try<T> {
     }
   }
 
-  final static class Failure<T> extends Try<T> {
+  final class Failure<T> implements Try<T> {
 
     private final Throwable error;
 
