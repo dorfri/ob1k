@@ -122,7 +122,7 @@ public interface Try<T> {
    * @return a new Try from applied functions
    */
   <U> Try<U> transform(Function<? super T, ? extends Try<U>> mapper,
-                                       Function<Throwable, ? extends Try<U>> recover);
+                       Function<Throwable, ? extends Try<U>> recover);
 
   /**
    * Feeds the value to a {@link java.util.function.Consumer} if {@link Try} is
@@ -136,13 +136,13 @@ public interface Try<T> {
    * Applies recover function in case of Failure or mapper function in case of Success.
    * If mapper is applied and throws an exception, then recover is applied with this exception.
    *
-   * @param recover a function to apply for the Failure exception
    * @param mapper  a function to apply for the Success value
+   * @param recover a function to apply for the Failure exception
    * @param <U>     computation type
    * @return the result of applied functions
    */
-  <U> Try<U> fold(Function<Throwable, ? extends U> recover,
-                                  Function<? super T, ? extends U> mapper);
+  <U> Try<U> fold(Function<? super T, ? extends U> mapper,
+                  Function<Throwable, ? extends U> recover);
 
   /**
    * Ensures that the (successful) result of the current Try satisfies the given predicate,
@@ -244,8 +244,8 @@ public interface Try<T> {
     }
 
     @Override
-    public <U> Try<U> fold(final Function<Throwable, ? extends U> recover,
-                           final Function<? super T, ? extends U> mapper) {
+    public <U> Try<U> fold(final Function<? super T, ? extends U> mapper,
+                           final Function<Throwable, ? extends U> recover) {
       return Try.<U>apply(() -> mapper.apply(value)).recover(recover::apply);
     }
 
@@ -382,8 +382,8 @@ public interface Try<T> {
     }
 
     @Override
-    public <U> Try<U> fold(final Function<Throwable, ? extends U> recover,
-                           final Function<? super T, ? extends U> mapper) {
+    public <U> Try<U> fold(final Function<? super T, ? extends U> mapper,
+                           final Function<Throwable, ? extends U> recover) {
       return apply(() -> recover.apply(error));
     }
 
