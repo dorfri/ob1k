@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.concurrent;
 
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.outbrain.ob1k.concurrent.combiners.BiFunction;
@@ -35,6 +34,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 /**
  * A set of helpers for ComposableFuture
@@ -168,12 +168,12 @@ public class ComposableFutures {
    * @return a future containing a list of all the results produced by the producer.
    */
   public static <T, R> ComposableFuture<List<R>> batch(final List<T> elements, final int batchSize,
-                                                       final java.util.function.Function<T, ComposableFuture<R>> producer) {
+                                                       final Function<T, ComposableFuture<R>> producer) {
     return batch(elements, 0, batchSize, producer);
   }
 
   private static <T, R> ComposableFuture<List<R>> batch(final List<T> elements, final int index, final int batchSize,
-                                                        final java.util.function.Function<T, ComposableFuture<R>> producer) {
+                                                        final Function<T, ComposableFuture<R>> producer) {
     if (index >= elements.size()) {
       return ComposableFutures.fromValue(Collections.<R>emptyList());
     }
@@ -212,7 +212,7 @@ public class ComposableFutures {
    * @return a future containing a list of all the results produced by the producer.
    */
   public static <T, R> ComposableFuture<List<R>> batchUnordered(final List<T> elements, final int batchSize,
-                                                                final java.util.function.Function<T, ComposableFuture<R>> producer) {
+                                                                final Function<T, ComposableFuture<R>> producer) {
 
     final AtomicInteger index = new AtomicInteger(0);
     final List<ComposableFuture<List<R>>> futures = new ArrayList<>(batchSize);
@@ -231,7 +231,7 @@ public class ComposableFutures {
   }
 
   private static <T, R> ComposableFuture<List<R>> seqUnordered(final List<T> elements, final AtomicInteger index,
-                                                               final java.util.function.Function<T, ComposableFuture<R>> producer) {
+                                                               final Function<T, ComposableFuture<R>> producer) {
     final int currentIndex = index.getAndIncrement();
     if (currentIndex >= elements.size()) {
       return ComposableFutures.fromValue(Collections.<R>emptyList());
@@ -262,13 +262,13 @@ public class ComposableFutures {
    * @return a stream containing the combined result of each batch
    */
   public static <T, R> Observable<List<R>> batchToStream(final List<T> elements, final int batchSize,
-                                                         final java.util.function.Function<T, ComposableFuture<R>> producer) {
+                                                         final Function<T, ComposableFuture<R>> producer) {
     return Observable.create(subscriber -> batchToStream(elements, batchSize, 0, subscriber, producer));
   }
 
   private static <T, R> void batchToStream(final List<T> elements, final int batchSize, final int index,
                                            final Subscriber<? super List<R>> subscriber,
-                                           final java.util.function.Function<T, ComposableFuture<R>> producer) {
+                                           final Function<T, ComposableFuture<R>> producer) {
 
     if (index >= elements.size()) {
       subscriber.onCompleted();
